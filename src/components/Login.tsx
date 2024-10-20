@@ -9,9 +9,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
+import { AiOutlineLoading3Quarters } from "react-icons/ai"; 
+import Toast from "./Toast";
 
 const useToast = (duration = 3000) => {
   const [toastMessage, setToastMessage] = useState("");
@@ -31,30 +32,66 @@ const useToast = (duration = 3000) => {
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState(""); 
+  const [passwordError, setPasswordError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toastMessage, isSuccess, showToast, triggerToast } = useToast();
   const navigate = useNavigate();
+
+  const validateForm = () => {
+    let isValid = true;
+
+    if (!email) {
+      setEmailError("Email is required");
+      isValid = false;
+    } else {
+      setEmailError("");
+    }
+
+    if (!password) {
+      setPasswordError("Password is required");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    return isValid;
+  };
+  // useEffect(()=>{
+  //   validateForm()
+  // })
+
   const handleLogin = async (e: any) => {
     e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setLoading(true);
 
     try {
       const response = await axios.post("http://localhost:3000/api/login", {
         email,
         password,
       });
+
       if (response.data.isSuccess) {
-        triggerToast("Loggedin Successfully", true);
+        triggerToast("Logged in Successfully", true);
         localStorage.setItem("token", response.data.token);
-        localStorage.setItem('name', response.data.user.name);
+        localStorage.setItem("name", response.data.user.name);
         navigate("/");
         window.location.reload();
       } else {
-        alert(response.data.message);
-        triggerToast("Loggedin failed", true);
+        triggerToast(response.data.message || "Login failed", false);
       }
-    } catch (err) {}
+    } catch (err) {
+      triggerToast("An error occurred during login", false);
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
-    <div className=" flex  h-[60vh]">
+    <div className="flex h-[60vh]">
       <Card className="w-[400px] m-auto">
         <CardHeader>
           <CardTitle className="text-center text-2xl">Login</CardTitle>
@@ -69,6 +106,9 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+              {emailError && (
+                <p className="text-red-500 text-[10px] mt-1 ml-2">{emailError}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
@@ -78,15 +118,26 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              {passwordError && (
+                <p className="text-red-500 text-[10px] mt-1 ml-2">{passwordError}</p>
+              )}
             </div>
           </form>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
-          <Button className="bg-orange text-white w-full" onClick={handleLogin}>
-            Login
+          <Button
+            className="bg-orange text-white w-full flex justify-center items-center"
+            onClick={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <AiOutlineLoading3Quarters className="animate-spin mr-2" />
+            ) : (
+              "Login"
+            )}
           </Button>
           <div className="flex gap-1">
-            <p className="text-xs">Not a user ?</p>
+            <p className="text-xs">Not a user?</p>
             <Link
               to={"/signup"}
               className="text-orange text-xs font-medium underline"

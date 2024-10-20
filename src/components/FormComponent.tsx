@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import Stepper from './Stepper'
 import PersonalDetails from './Personal'
@@ -8,7 +8,7 @@ import Skills from './Skill'
 import Projects from './Project'
 import Achievements from './Achievement'
 import Certifications from './Certification'
-import Template1 from '@/templates/template1'
+
 
 type Step = 'personal' | 'education' | 'experience' | 'skills' | 'projects' | 'achievements' | 'certifications'
 

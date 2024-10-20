@@ -11,9 +11,9 @@ import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { FC, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import Toast from "./Toast";
 
-// Helper to manage toast
 const useToast = (duration = 3000) => {
   const [toastMessage, setToastMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(true);
@@ -34,9 +34,40 @@ const Signup = () => {
   const [name, setName] = useState("");
   const [emailId, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toastMessage, isSuccess, showToast, triggerToast } = useToast();
+  const validateForm = () => {
+    let isValid = true;
+
+    if (!emailId) {
+      setEmailError("Email is required");
+      isValid = false;
+    } else {
+      setEmailError("");
+    }
+    if (!name) {
+      setNameError("Name is required");
+      isValid = false;
+    } else {
+      setNameError("");
+    }
+
+    if (!password) {
+      setPasswordError("Password is required");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+
+    return isValid;
+  };
 
   const handleSignUp = async () => {
+    if (!validateForm()) return;
+    setLoading(true);
     try {
       const { data } = await axios.post(
         "http://localhost:3000/api/send-verification-otp",
@@ -52,6 +83,8 @@ const Signup = () => {
       }
     } catch {
       triggerToast("Something went wrong", false);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,6 +105,11 @@ const Signup = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
+                {nameError && (
+                  <p className="text-red-500 text-[10px] mt-1 ml-2">
+                    {nameError}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="email">Email Address</Label>
@@ -81,6 +119,11 @@ const Signup = () => {
                   value={emailId}
                   onChange={(e) => setEmail(e.target.value)}
                 />
+                {emailError && (
+                  <p className="text-red-500 text-[10px] mt-1 ml-2">
+                    {emailError}
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="password">Password</Label>
@@ -90,15 +133,25 @@ const Signup = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                {passwordError && (
+                  <p className="text-red-500 text-[10px] mt-1 ml-2">
+                    {passwordError}
+                  </p>
+                )}
               </div>
             </form>
           </CardContent>
           <CardFooter className="flex flex-col gap-2">
             <Button
-              className="bg-orange text-white w-full"
+              className="bg-orange text-white w-full flex justify-center items-center"
               onClick={handleSignUp}
+              disabled={loading}
             >
-              Sign Up
+              {loading ? (
+                <AiOutlineLoading3Quarters className="animate-spin mr-2" />
+              ) : (
+                "Sign Up"
+              )}
             </Button>
             <div className="flex gap-1">
               <p className="text-xs">Already a user?</p>
@@ -129,6 +182,7 @@ interface OtpModalProps {
 const OtpModal: FC<OtpModalProps> = ({ email, name, password }) => {
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [timeLeft, setTimeLeft] = useState(10);
+  const [loading, setLoading] = useState(false);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const navigate = useNavigate();
   const { toastMessage, isSuccess, showToast, triggerToast } = useToast();
@@ -160,6 +214,7 @@ const OtpModal: FC<OtpModalProps> = ({ email, name, password }) => {
   };
 
   const handleVerifyOtp = async () => {
+    setLoading(true);
     const userInputOtp = otp.join("");
     try {
       const { data } = await axios.post(
@@ -170,14 +225,25 @@ const OtpModal: FC<OtpModalProps> = ({ email, name, password }) => {
 
       if (data.isSuccess) {
         try {
-          axios.post("http://localhost:3000/api/signup", {
-            name,
-            email,
-            password,
-          });
-          triggerToast("Signed up successfully", true);
+          const response = await axios.post(
+            "http://localhost:3000/api/signup",
+            {
+              name,
+              email,
+              password,
+            }
+          );
+          if (response.data.isSuccess) {
+            triggerToast("Signed up successfully", true);
+            localStorage.setItem("token", response.data.token);
+            localStorage.setItem("name", response.data.user.name);
+            navigate("/");
+            window.location.reload();
+          } else {
+            triggerToast(response.data.message || "sign up failed", false);
+          }
         } catch {
-          alert("djvdb");
+          alert("Signup failed.");
         }
         setTimeout(() => navigate("/"), 3000);
       } else {
@@ -185,6 +251,8 @@ const OtpModal: FC<OtpModalProps> = ({ email, name, password }) => {
       }
     } catch {
       alert("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -218,10 +286,15 @@ const OtpModal: FC<OtpModalProps> = ({ email, name, password }) => {
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
         <Button
-          className="bg-orange text-white w-full"
+          className="bg-orange text-white w-full flex justify-center items-center"
           onClick={handleVerifyOtp}
+          disabled={loading}
         >
-          Verify
+          {loading ? (
+            <AiOutlineLoading3Quarters className="animate-spin mr-2" />
+          ) : (
+            "Verify"
+          )}
         </Button>
         <div className="flex items-center gap-2 pt-2">
           {timeLeft > 0 ? (
